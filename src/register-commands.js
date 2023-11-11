@@ -1,7 +1,7 @@
 //require('dotenv').config();
-const TOKEN = 'TOKEN GOES HERE';
-const GUILD_ID = 'GUILD_ID GOES HERE';
-const CLIENT_ID = 'CLIENT ID GOES HERE';
+const TOKEN = 'TOKEN_HERE';
+const GUILD_ID = 'GUILD_ID_HERE';
+const CLIENT_ID = 'CLIENT_ID_HERE';
 
 const { REST, Routes, ApplicationCommandOptionType } = require('discord.js');
 

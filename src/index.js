@@ -2,11 +2,11 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { Client, IntentsBitField } = require('discord.js');
-const {parse} = require("dotenv");
+//const {parse} = require("dotenv");
 
 const wait = require('node:timers/promises').setTimeout;
 
-const TOKEN = 'TOKEN GOES HERE';
+const TOKEN = 'TOKEN_HERE';
 
 const convert_time = (time) => {
     const split_time = time.split(':');
@@ -40,7 +40,7 @@ const has_AC = (model) => {
     };
 
     const split_model = model.split(' ');
-    if (parseInt(split_model[0]) >= 2015){
+    if (parseInt(split_model[0]) >= 2012){
         return 'Yes!'
     }
     else{
@@ -51,7 +51,7 @@ const has_AC = (model) => {
             return 'Yes!'
         }
         else{
-            return 'No...'
+            return 'No!'
         }
     }
 }
@@ -140,7 +140,7 @@ client.on('messageCreate',(message) => {
                         // Print or process the extracted data
                         //console.log('Main Page Data:', mainPageData);
                         //console.log(mainPageData.scheduleData[1]);
-                        const formatted_message = `The next departing bus for ${mainPageData.title} is for:\n**${mainPageData.scheduleData[1].trip}.**\n\n**Details:**\nScheduled for: **${convert_time(mainPageData.scheduleData[1].sched)}**\nCorrected time: **${convert_time(mainPageData.scheduleData[1].corr)}**\nDelay: **${mainPageData.scheduleData[1].delay} min**\nWait: **${mainPageData.scheduleData[1].wait}**\nVehicle: **${mainPageData.scheduleData[1].model}**\nDoes this bus have AC? **${has_AC(mainPageData.scheduleData[1].model)}**`;
+                        const formatted_message = `The next departing bus for [${mainPageData.title}](${baseUrl}${homepagePath}) is for:\n**${mainPageData.scheduleData[1].trip}.**\n\n**Details:**\nScheduled for: **${convert_time(mainPageData.scheduleData[1].sched)}**\nCorrected time: **${convert_time(mainPageData.scheduleData[1].corr)}**\nDelay: **${mainPageData.scheduleData[1].delay} min**\nWait: **${mainPageData.scheduleData[1].wait}**\nVehicle: **${mainPageData.scheduleData[1].model}**\nDoes this bus have AC? **${has_AC(mainPageData.scheduleData[1].model)}**`;
                         await message.reply(formatted_message);
                     }
                 } catch (error) {
@@ -222,7 +222,7 @@ client.on('interactionCreate', async interaction => {
                     //console.log('Main Page Data:', mainPageData);
                     //console.log(mainPageData.scheduleData[1]);
 
-                    const formatted_message = `The next departing bus for ${mainPageData.title} is for:\n**${mainPageData.scheduleData[1].trip}.**\n\n**Details:**\nScheduled for: **${convert_time(mainPageData.scheduleData[1].sched)}**\nCorrected time: **${convert_time(mainPageData.scheduleData[1].corr)}**\nDelay: **${mainPageData.scheduleData[1].delay} min**\nWait: **${mainPageData.scheduleData[1].wait}**\nVehicle: **${mainPageData.scheduleData[1].model}**\nDoes this bus have AC? **${has_AC(mainPageData.scheduleData[1].model)}**`;
+                    const formatted_message = `The next departing bus for [${mainPageData.title}](https://tcomm.bustrainferry.com/mobile/stop/${stopID}) is for:\n**${mainPageData.scheduleData[1].trip}.**\n\n**Details:**\nScheduled for: **${convert_time(mainPageData.scheduleData[1].sched)}**\nCorrected time: **${convert_time(mainPageData.scheduleData[1].corr)}**\nDelay: **${mainPageData.scheduleData[1].delay} min**\nWait: **${mainPageData.scheduleData[1].wait}**\nVehicle: **${mainPageData.scheduleData[1].model}**\nDoes this bus have AC? **${has_AC(mainPageData.scheduleData[1].model)}**`;
 
                     await interaction.editReply(formatted_message);
                 }
