@@ -7,16 +7,37 @@ const { Client, IntentsBitField } = require('discord.js');
 const wait = require('node:timers/promises').setTimeout;
 
 const TOKEN = 'TOKEN_HERE';
+const GUILD_ID = 'GUILD_ID_HERE';
+const CLIENT_ID = 'CLIENT_ID_HERE';
+
+const fix_delay = (delay_str) => {
+    // Extract the numerical part of the input string
+    const delay_num = parseFloat(delay_str);
+
+    if (delay_str == '') {
+        return 'Delayed by: **0 min**';
+    } else if (delay_num < 0) {
+        return 'Delayed by: **' + Math.abs(delay_num) + ' min**';
+    } else if (delay_num === 0) {
+        return 'Delayed by: **0 min**';
+    } else {
+        return 'Early by: **' + delay_num + ' min**';
+    }
+}
 
 const convert_time = (time) => {
     const split_time = time.split(':');
+    if (parseInt(split_time[0]) > 24){
+        split_time[0] = (parseInt(split_time[0]) - 24).toString();
+    }
+    //console.log(split_time)
     if (parseInt(split_time[0]) > 12){
         const new_time = parseInt(split_time[0])-12;
         const new_string = new_time.toString()+':'+split_time[1]+' PM'
         return new_string;
     }
     else{
-        return time + ' AM';
+        return split_time.join(':') + ' AM';
     }
 }
 
@@ -26,6 +47,7 @@ const has_AC = (model) => {
         "Chevrolet 4500/Girardin G5": false,
         "Chevrolet 4500/ARBOC SOF 27": true,
         "Chevrolet 4500/ARBOC SOM 28": true,
+        "New Flyer D40LF": false,
         "New Flyer D40LFR": false,
         "New Flyer D60LFR": false,
         "New Flyer DE60LFR": false,
@@ -137,10 +159,58 @@ client.on('messageCreate',(message) => {
                             scheduleData,
                         };
 
-                        // Print or process the extracted data
-                        //console.log('Main Page Data:', mainPageData);
-                        //console.log(mainPageData.scheduleData[1]);
-                        const formatted_message = `The next departing bus for [${mainPageData.title}](${baseUrl}${homepagePath}) is for:\n**${mainPageData.scheduleData[1].trip}.**\n\n**Details:**\nScheduled for: **${convert_time(mainPageData.scheduleData[1].sched)}**\nCorrected time: **${convert_time(mainPageData.scheduleData[1].corr)}**\nDelay: **${mainPageData.scheduleData[1].delay} min**\nWait: **${mainPageData.scheduleData[1].wait}**\nVehicle: **${mainPageData.scheduleData[1].model}**\nDoes this bus have AC? **${has_AC(mainPageData.scheduleData[1].model)}**`;
+                        let buses_at_this_stop = []
+                        let to_list = []
+                        for (let i = 1; i < mainPageData.scheduleData.length; i++) {
+                            if(buses_at_this_stop.includes(mainPageData.scheduleData[i].trip) == false){
+                                buses_at_this_stop.push(mainPageData.scheduleData[i].trip)
+                                to_list.push(mainPageData.scheduleData[i])
+                            }
+                        }
+                        //console.log(to_list)
+                        let formatted_message;
+                        if(to_list.length == 1){
+                            const scheduled_for = convert_time(to_list[0].sched);
+                            const delay = fix_delay(to_list[0].delay);
+                            let adjust_time = to_list[0].corr
+                            if (adjust_time ==''){
+                                adjust_time = scheduled_for;
+                            }
+                            else{
+                                adjust_time = convert_time(adjust_time)
+                            }
+
+                            let wait_time = to_list[0].wait;
+                            if (wait_time == ''){
+                                wait_time = '> 90 min'
+                            }
+                            const vehicle = to_list[0].model;
+                            //formatted_message = `The next departing bus for [${mainPageData.title}](https://tcomm.bustrainferry.com/mobile/stop/${stopID}) is for:\n# ${to_list[0].trip}.\n\n**Details:**\nScheduled for: **${scheduled_for}**\nDelay: **${delay}**\nArrival time including Delay: **${adjust_time}**\nWait: **${wait_time}**\nVehicle: **${vehicle}**\nDoes this bus have AC? **${has_AC(mainPageData.scheduleData[1].model)}**`;
+                            formatted_message = `The next departing bus for [${mainPageData.title}](https://tcomm.bustrainferry.com/mobile/stop/${stopID}) is for:\n# ${to_list[0].trip}.\n\n**Details:**\nScheduled for: **${scheduled_for}**\n${delay}\nAdjusted arrival time: **${adjust_time}**\nWait: **${wait_time}**\nVehicle: **${vehicle}**`;
+
+                        }
+                        else{
+                            formatted_message = `The next departing buses for [${mainPageData.title}](https://tcomm.bustrainferry.com/mobile/stop/${stopID}) are for:`;
+                            for (let i = 0; i < to_list.length; i++) {
+                                const scheduled_for = convert_time(to_list[i].sched);
+                                const delay = fix_delay(to_list[i].delay);
+                                let adjust_time = to_list[i].corr
+                                if (adjust_time ==''){
+                                    adjust_time = scheduled_for;
+                                }
+                                else{
+                                    adjust_time = convert_time(adjust_time)
+                                }
+                                let wait_time = to_list[i].wait;
+                                if (wait_time == ''){
+                                    wait_time = '> 90 min'
+                                }
+                                const vehicle = to_list[i].model;
+                                //formatted_message += `\n\n# ${to_list[i].trip}.\n\n**Details:**\nScheduled for: **${scheduled_for}**\nDelay: **${delay}\nArrival time including delay: **${adjust_time}**\nWait: **${wait_time}**\nVehicle: **${vehicle}**\nDoes this bus have AC? **${has_AC(to_list[i].model)}**`;
+                                formatted_message += `\n\n# ${to_list[i].trip}.\n\n**Details:**\nScheduled for: **${scheduled_for}**\n${delay}\nAdjusted arrival time: **${adjust_time}**\nWait: **${wait_time}**\nVehicle: **${vehicle}**`;
+                                //console.log(formatted_message)
+                            }
+                        }
                         await message.reply(formatted_message);
                     }
                 } catch (error) {
@@ -221,8 +291,60 @@ client.on('interactionCreate', async interaction => {
                     // Print or process the extracted data
                     //console.log('Main Page Data:', mainPageData);
                     //console.log(mainPageData.scheduleData[1]);
+                    let buses_at_this_stop = []
+                    let to_list = []
+                    for (let i = 1; i < mainPageData.scheduleData.length; i++) {
+                        if(buses_at_this_stop.includes(mainPageData.scheduleData[i].trip) == false){
+                            buses_at_this_stop.push(mainPageData.scheduleData[i].trip)
+                            to_list.push(mainPageData.scheduleData[i])
+                        }
+                    }
+                    //console.log(to_list)
+                    let formatted_message;
+                    if(to_list.length == 1){
+                        const scheduled_for = convert_time(to_list[0].sched);
+                        const delay = fix_delay(to_list[0].delay);
+                        let adjust_time = to_list[0].corr
+                        if (adjust_time ==''){
+                            adjust_time = scheduled_for;
+                        }
+                        else{
+                            adjust_time = convert_time(adjust_time)
+                        }
 
-                    const formatted_message = `The next departing bus for [${mainPageData.title}](https://tcomm.bustrainferry.com/mobile/stop/${stopID}) is for:\n**${mainPageData.scheduleData[1].trip}.**\n\n**Details:**\nScheduled for: **${convert_time(mainPageData.scheduleData[1].sched)}**\nCorrected time: **${convert_time(mainPageData.scheduleData[1].corr)}**\nDelay: **${mainPageData.scheduleData[1].delay} min**\nWait: **${mainPageData.scheduleData[1].wait}**\nVehicle: **${mainPageData.scheduleData[1].model}**\nDoes this bus have AC? **${has_AC(mainPageData.scheduleData[1].model)}**`;
+                        let wait_time = to_list[0].wait;
+                        if (wait_time == ''){
+                            wait_time = '> 90 min'
+                        }
+                        const vehicle = to_list[0].model;
+                        //formatted_message = `The next departing bus for [${mainPageData.title}](https://tcomm.bustrainferry.com/mobile/stop/${stopID}) is for:\n# ${to_list[0].trip}.\n\n**Details:**\nScheduled for: **${scheduled_for}**\nDelay: **${delay}**\nArrival time including Delay: **${adjust_time}**\nWait: **${wait_time}**\nVehicle: **${vehicle}**\nDoes this bus have AC? **${has_AC(mainPageData.scheduleData[1].model)}**`;
+                        formatted_message = `The next departing bus for [${mainPageData.title}](https://tcomm.bustrainferry.com/mobile/stop/${stopID}) is for:\n# ${to_list[0].trip}.\n\n**Details:**\nScheduled for: **${scheduled_for}**\n${delay}\nAdjusted arrival time: **${adjust_time}**\nWait: **${wait_time}**\nVehicle: **${vehicle}**`;
+
+                    }
+                    else{
+                        formatted_message = `The next departing buses for [${mainPageData.title}](https://tcomm.bustrainferry.com/mobile/stop/${stopID}) are for:`;
+                        for (let i = 0; i < to_list.length; i++) {
+                            const scheduled_for = convert_time(to_list[i].sched);
+                            let delay = fix_delay(to_list[i].delay);
+
+                            let adjust_time = to_list[i].corr
+                            if (adjust_time ==''){
+                                adjust_time = scheduled_for;
+                            }
+                            else{
+                                adjust_time = convert_time(adjust_time)
+                            }
+                            let wait_time = to_list[i].wait;
+                            if (wait_time == ''){
+                                wait_time = '> 90 min'
+                            }
+                            //console.log(wait_time)
+                            const vehicle = to_list[i].model;
+                            //formatted_message += `\n\n# ${to_list[i].trip}.\n\n**Details:**\nScheduled for: **${scheduled_for}**\nDelay: **${delay}\nArrival time including delay: **${adjust_time}**\nWait: **${wait_time}**\nVehicle: **${vehicle}**\nDoes this bus have AC? **${has_AC(to_list[i].model)}**`;
+                            formatted_message += `\n\n# ${to_list[i].trip}.\n\n**Details:**\nScheduled for: **${scheduled_for}**\n${delay}\nAdjusted arrival time: **${adjust_time}**\nWait: **${wait_time}**\nVehicle: **${vehicle}**`;
+                        }
+                    }
+                    //const formatted_message = `The next departing bus for [${mainPageData.title}](https://tcomm.bustrainferry.com/mobile/stop/${stopID}) is for:\n**${mainPageData.scheduleData[1].trip}.**\n\n**Details:**\nScheduled for: **${convert_time(mainPageData.scheduleData[1].sched)}**\nCorrected time: **${convert_time(mainPageData.scheduleData[1].corr)}**\nDelay: **${mainPageData.scheduleData[1].delay} min**\nWait: **${mainPageData.scheduleData[1].wait}**\nVehicle: **${mainPageData.scheduleData[1].model}**\nDoes this bus have AC? **${has_AC(mainPageData.scheduleData[1].model)}**`;
 
                     await interaction.editReply(formatted_message);
                 }
